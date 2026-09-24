@@ -200,6 +200,22 @@ td.us{color:var(--paper);font-weight:600;background:rgba(61,220,151,.05)}
 td{color:var(--dim)}
 td:first-child{color:var(--paper)}
 
+/* ---------- downloads ---------- */
+/* One card per platform, because "Download" alone leaves someone on a Pi
+   guessing which of nine files is theirs. */
+.dl{margin-top:52px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.dl .box{border:1px solid var(--line);border-radius:14px;padding:24px 22px;background:rgba(238,241,246,.018);
+  display:flex;flex-direction:column;gap:10px}
+.dl .box h3{font-size:18px}
+.dl .box p{color:var(--dim);font-size:14.5px;flex:1}
+.dl .box a{color:var(--g1);font-family:var(--mono);font-size:13.5px;text-decoration:none;border-bottom:1px solid transparent}
+.dl .box a:hover{border-bottom-color:var(--g1)}
+.dl code{font-family:var(--mono);font-size:12.5px;color:var(--paper);background:rgba(4,5,10,.6);
+  border:1px solid var(--line);border-radius:8px;padding:9px 11px;display:block;
+  /* pre-wrap, not pre: on a phone the command has to fold rather than hide
+     half of itself behind a scrollbar nobody notices. */
+  white-space:pre-wrap;overflow-wrap:anywhere}
+
 /* ---------- pricing ---------- */
 .plans{margin-top:58px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;align-items:start}
 .plans.two{grid-template-columns:1.25fr .75fr;max-width:980px}
@@ -420,9 +436,10 @@ a:focus-visible,button:focus-visible,summary:focus-visible{
     <a href="#features" class="hide-sm">Features</a>
     <a href="#compare" class="hide-sm">Compare</a>
     <a href="#pricing">Pricing</a>
+    <a href="#download">Download</a>
     <a href="#faq" class="hide-sm">FAQ</a>
     <a href="#help" class="hide-sm">Help</a>
-    <a href="#pricing" class="btn btn-ghost" style="padding:9px 18px">Explore Aurora</a>
+    <a href="#download" class="btn btn-ghost" style="padding:9px 18px">Get Aurora</a>
   </nav>
 </header>
 
@@ -656,6 +673,40 @@ a:focus-visible,button:focus-visible,summary:focus-visible{
     </div>
   </section>
 
+  <!-- ============ DOWNLOADS ============ -->
+  <section id="download">
+    <div class="obs">
+      <div class="kicker">Download</div>
+      <h2>Pick your machine.</h2>
+      <p class="sub">Every build is on the same page. The installers register Aurora to start with the machine, so it is there whenever the machine is on.</p>
+    </div>
+
+    <div class="dl obs">
+      <div class="box">
+        <h3>Windows 10 / 11</h3>
+        <p>An installer that registers the service, opens the firewall for the rest of the house and fetches FFmpeg if the machine has none.</p>
+        <a href="https://github.com/aurora-media/aurora-releases/releases/latest" rel="noopener">aurora-&lt;version&gt;-windows-setup.exe &rarr;</a>
+      </div>
+      <div class="box">
+        <h3>Raspberry Pi &amp; Linux</h3>
+        <p>A .deb for Raspberry Pi OS, Debian, Ubuntu and Mint, and an .rpm for Fedora. FFmpeg comes with it; the service starts itself.</p>
+        <a href="https://github.com/aurora-media/aurora-releases/releases/latest" rel="noopener">.deb (arm64 / amd64) and .rpm &rarr;</a>
+      </div>
+      <div class="box">
+        <h3>Docker</h3>
+        <p>FFmpeg and MKVToolNix inside, amd64 and arm64. Nothing else to install.</p>
+        <code>docker run -d -p 8096:8096   -v aurora-data:/data   ghcr.io/aurora-media/aurora</code>
+      </div>
+      <div class="box">
+        <h3>macOS</h3>
+        <p>An archive for Apple silicon or Intel, and four lines in Terminal. A signed disk image needs an Apple developer account and is not here yet.</p>
+        <a href="https://github.com/aurora-media/aurora-releases/releases/latest" rel="noopener">aurora-&lt;version&gt;-macos &rarr;</a>
+      </div>
+    </div>
+
+    <p class="sub" style="margin-top:28px">Not sure what any of that means? The <a href="https://github.com/aurora-media/aurora-releases#readme" rel="noopener">install guide</a> walks through each platform screen by screen, including what Windows' blue warning is and why it appears.</p>
+  </section>
+
   <!-- ============ FAQ ============ -->
   <section id="faq">
     <div class="obs">
@@ -734,6 +785,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible{
   <nav>
     <a href="#features">Features</a>
     <a href="#pricing">Pricing</a>
+    <a href="#download">Download</a>
     <a href="#faq">FAQ</a>
     <a href="#help">Help</a>
     <a href="/privacy">Privacy</a>
@@ -755,7 +807,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible{
      a long way down, so on a phone there was nothing to tap for most of the page. -->
 <div class="sticky-cta" id="stickyCta">
   <small>Free · no time limit</small>
-  <a class="btn btn-primary" href="https://github.com/aurora-media/aurora-releases/releases/latest" rel="noopener">Download</a>
+  <a class="btn btn-primary" href="#download">Download</a>
 </div>
 
 <script src="/main.js" defer></script>
