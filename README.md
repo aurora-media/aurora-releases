@@ -17,7 +17,7 @@ Aurora from anywhere but this repository.
 > Installation documentation and help are below.
 
 **Found a bug, or something behaving oddly?** [Open an issue](../../issues/new) — the
-version from **Panel de control → Actualizaciones**, what you did, and what happened
+version from **Dashboard → Updates**, what you did, and what happened
 instead is enough to start with.
 
 `landing/` holds the source of [aurora-media.shop](https://aurora-media.shop).
@@ -25,10 +25,12 @@ instead is enough to start with.
 
 ## Contents
 
-- [Requirements](#requirements)
-- [Install with an installer](#install-with-an-installer)
-- [Install without an installer](#install-without-an-installer)
+- [Requirements](#requirements) - and which download you want
+- [Windows, step by step](#windows-step-by-step)
+- [Raspberry Pi, Debian, Ubuntu, Mint](#raspberry-pi-debian-ubuntu-mint--step-by-step)
+- [macOS](#macos-step-by-step)
 - [Docker](#docker)
+- [Install without an installer](#install-without-an-installer-any-platform)
 - [First run](#first-run)
 - [Updating](#updating)
 - [Where should the server run?](#where-should-the-server-run)
@@ -43,88 +45,283 @@ instead is enough to start with.
 
 |  | Minimum | Notes |
 |---|---|---|
-| **OS** | Windows 10, macOS 11, or any Linux with systemd | 64-bit. ARM64 is supported on Linux (Raspberry Pi 4/5) and macOS (Apple silicon). |
-| **FFmpeg** | any recent build | **Required.** It is what plays anything your browser cannot open by itself. The Linux packages install it for you; on Windows and macOS you install it once, see below. |
+| **OS** | Windows 10, macOS 11, any Linux with systemd, or Docker | 64-bit. ARM64 works on Linux (Raspberry Pi 4/5, ARM NAS) and macOS (Apple silicon). |
+| **FFmpeg** | any recent build | **Required.** It is what plays anything your browser cannot open by itself. The Windows installer, the Linux packages and the Docker image all take care of it; only the plain archives leave it to you. |
 | **RAM** | 1 GB free | A Raspberry Pi 4 with 2 GB is comfortable. |
-| **Disk** | ~80 MB, plus cache | The transcode cache is capped at 10 GB by default and is configurable. |
+| **Disk** | ~150 MB, plus cache | The transcode cache is capped at 10 GB by default and is configurable. |
 | **Browser** | anything from the last few years | Chrome, Edge, Firefox, Safari, and the browser built into most televisions. |
 
 Aurora does **not** need a GPU. It uses one for transcoding if it finds one, and gets
 along without.
 
-### Installing FFmpeg
+**Which download do I want?** The short answer:
+
+| You have | Take this |
+|---|---|
+| A Windows PC | `aurora-vX.Y.Z-windows-setup.exe` |
+| A Raspberry Pi (Raspberry Pi OS) | `aurora-vX.Y.Z-linux-arm64.deb` |
+| Debian, Ubuntu, Mint on a normal PC | `aurora-vX.Y.Z-linux-amd64.deb` |
+| Fedora, RHEL, Rocky | `aurora-vX.Y.Z-linux-x86_64.rpm` |
+| A Mac | `aurora-vX.Y.Z-macos-applesilicon.tar.gz` (M1 or later) or `-macos-intel` |
+| A NAS, Unraid, CasaOS, or you already use Docker | [the container image](#docker) |
+
+Everything is on the [latest release page](https://github.com/aurora-media/aurora-releases/releases/latest),
+under **Assets**. If the list is collapsed, click *Assets* to open it.
+
+---
+
+## Windows, step by step
+
+**1. Download the installer.** Open the
+[latest release](https://github.com/aurora-media/aurora-releases/releases/latest),
+click **Assets**, and click `aurora-vX.Y.Z-windows-setup.exe`. It lands in your
+Downloads folder.
+
+**2. Run it.** Double-click the file.
+
+**3. Get past the blue warning.** Windows shows **"Windows protected your PC"**. Click
+**More info**, then **Run anyway**.
+
+> This appears because the installer is not code-signed. A certificate costs a few
+> hundred euros a year and will be bought when that is worth it. Until then, this is
+> the honest state of things rather than something to discover halfway through. The
+> file you are running is the one published on this page and nowhere else.
+
+**4. Approve the admin prompt.** Windows asks *"Do you want to allow this app to make
+changes?"* — **Yes**. Aurora is installed as a Windows **service**, and registering a
+service, opening the firewall and writing to `Program Files` all need administrator
+rights. This is asked once, by the installer, and never again by Aurora itself.
+
+**5. Click through the wizard.** Four questions, all with sensible answers already
+filled in:
+
+| Page | What it asks | Just press Next unless… |
+|---|---|---|
+| Install location | Where the program goes | …you want it off the system drive. `C:\Program Files\Aurora` is right for almost everyone. |
+| Data folder | Where your library **data** goes — database, accounts, watch history, artwork, cache | …that drive is short of space. This is **not** your films; it is what Aurora writes *about* them. |
+| Port | Which port Aurora answers on | …something else already uses **8096**. Jellyfin does, so if you run Jellyfin on the same machine, use `8097`. |
+| Almost there | Two tick boxes | Leave both ticked. See below. |
+
+The two tick boxes on the last page:
+
+- **Allow other devices on my network to reach Aurora** — adds a Windows Firewall
+  rule. Without it Aurora works on this PC and is invisible to every phone, tablet and
+  television in the house. This is the single most common "it does not work".
+- **Download and install FFmpeg** — only offered when the machine has none. It fetches
+  the standard Windows build (~90 MB) from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/)
+  and puts it beside Aurora, where Aurora looks for it. Without FFmpeg, Aurora plays
+  only the files your browser can already open by itself.
+
+**6. Finish.** Leave **Open Aurora** ticked and click Finish. Your browser opens at
+`http://localhost:8096`. Go to [First run](#first-run).
+
+### What the Windows installer actually did
+
+| Thing | Where |
+|---|---|
+| Program | `C:\Program Files\Aurora` |
+| Your data | `C:\ProgramData\Aurora` — database, accounts, history, artwork, cache, `aurora.log` |
+| Settings | `C:\Program Files\Aurora\aurora.conf` — port, data folder, web folder |
+| Service | **Aurora Media Server**, startup type *Automatic*, restarts itself if it crashes |
+| Firewall | Inbound rule *Aurora Media Server* on the port you chose, private and domain networks |
+| Start menu | *Aurora*, *Aurora data folder*, *Aurora log*, *Uninstall Aurora* |
+
+It starts with Windows and needs **nobody logged in** — that is what "service" means
+here. To check on it: press `Win+R`, type `services.msc`, find **Aurora Media Server**.
+Right-click for Start, Stop and Restart.
+
+To change the port or the data folder later, edit `aurora.conf` and restart the
+service from `services.msc`.
+
+**Uninstalling:** *Settings → Apps → Installed apps → Aurora → Uninstall*. The service
+and the firewall rule are removed, and you are **asked** whether to delete your data
+folder — say No and a reinstall picks up exactly where you left off, accounts and
+watch history included.
+
+> **Media on a NAS or network share?** A Windows service runs as *Local System*, which
+> has no access to your mapped network drives. Open `services.msc` → **Aurora Media
+> Server** → *Properties* → **Log On** tab → *This account*, and give it a Windows
+> account that can reach the share. Then use the full `\\server\share\...` path when
+> adding the library, not the mapped letter.
+
+---
+
+## Raspberry Pi, Debian, Ubuntu, Mint — step by step
+
+**1. Download the package** on the Pi or PC itself:
 
 ```bash
-# Debian / Ubuntu / Raspberry Pi OS — the .deb does this for you
-sudo apt install ffmpeg
+# Raspberry Pi 4/5 and other ARM boards (64-bit Raspberry Pi OS)
+wget https://github.com/aurora-media/aurora-releases/releases/latest/download/aurora-vX.Y.Z-linux-arm64.deb
 
-# macOS
+# ordinary 64-bit PCs
+wget https://github.com/aurora-media/aurora-releases/releases/latest/download/aurora-vX.Y.Z-linux-amd64.deb
+```
+
+Replace `vX.Y.Z` with the version on the
+[latest release page](https://github.com/aurora-media/aurora-releases/releases/latest).
+
+**2. Install it.** `apt` pulls in FFmpeg for you:
+
+```bash
+sudo apt install ./aurora-vX.Y.Z-linux-arm64.deb
+```
+
+**3. That is it.** The package created an `aurora` system user, enabled the service and
+started it. It printed the address to open. Check it is running:
+
+```bash
+systemctl status aurora          # should say active (running)
+journalctl -u aurora -f          # watch what it is doing, Ctrl+C to stop watching
+```
+
+**4. Open it** at `http://<the-machine's-ip>:8096`. Find the IP with `hostname -I`.
+
+| Thing | Where |
+|---|---|
+| Program | `/usr/bin/aurora`, web app in `/usr/share/aurora/web` |
+| Your data | `/var/lib/aurora` — database, accounts, history, artwork, cache |
+| Service | `/lib/systemd/system/aurora.service`, runs as the `aurora` user |
+| Logs | `journalctl -u aurora` |
+
+**Permissions.** Aurora runs as the `aurora` user, so that user has to be able to
+*read* your media folder. If a scan finds nothing, that is almost always why:
+
+```bash
+sudo usermod -aG <group-that-owns-the-media> aurora
+sudo systemctl restart aurora
+```
+
+**Uninstalling:** `sudo apt remove aurora`. `/var/lib/aurora` is deliberately left
+alone, so your accounts and history survive. `sudo apt purge aurora` if you really
+want it gone, and delete `/var/lib/aurora` by hand.
+
+### Fedora, RHEL, Rocky
+
+```bash
+sudo dnf install ./aurora-vX.Y.Z-linux-x86_64.rpm
+```
+
+Everything else is identical to the above.
+
+---
+
+## macOS, step by step
+
+**1. Download** `aurora-vX.Y.Z-macos-applesilicon.tar.gz` (M1 or newer) or
+`aurora-vX.Y.Z-macos-intel.tar.gz` from the
+[latest release](https://github.com/aurora-media/aurora-releases/releases/latest).
+
+**2. Install FFmpeg**, once, in Terminal:
+
+```bash
 brew install ffmpeg
-
-# Windows, with winget
-winget install Gyan.FFmpeg
 ```
 
-On Windows you can also download a build from
-[gyan.dev](https://www.gyan.dev/ffmpeg/builds/) and put the folder containing
-`ffmpeg.exe` on your `PATH`.
+No Homebrew? Install it from [brew.sh](https://brew.sh) first — one pasted command.
+
+**3. Unpack and run:**
+
+```bash
+cd ~/Downloads
+tar xzf aurora-vX.Y.Z-macos-applesilicon.tar.gz
+cd aurora-vX.Y.Z-macos-applesilicon
+./aurora -web ./web -data ~/Library/Application\ Support/Aurora
+```
+
+macOS may say the binary is from an unidentified developer: *System Settings → Privacy
+& Security → Open Anyway*, once.
+
+**4. Open** `http://localhost:8096`.
+
+**5. To keep it running** after you close Terminal, and to start it with your session,
+save this as `~/Library/LaunchAgents/shop.auroramedia.server.plist`, with the two paths
+corrected, then `launchctl load -w ~/Library/LaunchAgents/shop.auroramedia.server.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>shop.auroramedia.server</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/YOU/Aurora/aurora</string>
+    <string>-web</string><string>/Users/YOU/Aurora/web</string>
+    <string>-data</string><string>/Users/YOU/Library/Application Support/Aurora</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict>
+</plist>
+```
+
+A signed `.dmg` that does all of this for you is coming; it needs a paid Apple
+developer account, which Aurora does not have yet.
 
 ---
 
-## Install with an installer
+## Docker
 
-Download from [Releases](https://github.com/aurora-media/aurora-releases/releases) and run it. Each installer registers Aurora
-to start with the machine, so your library is there whenever the machine is on.
+The image bundles FFmpeg and MKVToolNix, so there is nothing else to install. It runs
+on amd64 and arm64 (Raspberry Pi included).
 
-### Windows
-
-Run `aurora-vX.Y.Z-windows-setup.exe`. It installs to `Program Files`, registers a
-Windows service, and opens `http://localhost:8096` when it finishes.
-
-> **"Windows protected your PC"** — the installer is not code-signed yet. Click **More
-> info → Run anyway**. A signing certificate costs a few hundred euros a year and will
-> be bought when it is worth it; until then this is the honest state of things rather
-> than something to discover halfway through.
-
-Data lives in `C:\ProgramData\Aurora`. Uninstalling from *Add or remove programs*
-leaves it there, so your library, accounts and watch history survive a reinstall.
-
-### Linux
+**One command:**
 
 ```bash
-sudo apt install ./aurora-vX.Y.Z-linux-amd64.deb     # Debian, Ubuntu, Raspberry Pi OS
-sudo dnf install ./aurora-vX.Y.Z-linux-x86_64.rpm    # Fedora, RHEL
+docker run -d --name aurora --restart unless-stopped \
+  -p 8096:8096 \
+  -v aurora-data:/data \
+  -v /path/to/your/media:/path/to/your/media:ro \
+  ghcr.io/aurora-media/aurora:latest
 ```
 
-FFmpeg comes with it as a declared dependency. The service is enabled and started
-automatically:
+**Or with compose** — take [`docker-compose.yml`](docker-compose.yml) from this repository, or save this and run `docker compose up -d`:
 
-```bash
-systemctl status aurora        # is it running
-journalctl -u aurora -f        # watch what it is doing
+```yaml
+services:
+  aurora:
+    image: ghcr.io/aurora-media/aurora:latest
+    container_name: aurora
+    restart: unless-stopped
+    ports:
+      - "8096:8096"
+    volumes:
+      # Aurora's own data: database, accounts, history, artwork, cache.
+      - ./aurora-data:/data
+      # Your media, read-only. Mount it at the SAME path inside the container
+      # as it has on the host: library paths are stored in the database, and
+      # keeping the paths identical is what makes them survive a move.
+      - /path/to/your/media:/path/to/your/media:ro
+    environment:
+      - TZ=Europe/Madrid
 ```
 
-Data lives in `/var/lib/aurora` and is **not** removed when the package is.
+Then open `http://<the-machine's-ip>:8096`.
 
-### macOS
+| Setting | How |
+|---|---|
+| Different host port | `-p 8097:8096` (change only the left number) |
+| Hardware transcoding on Intel/AMD | add `--device /dev/dri:/dev/dri` |
+| Where its data lives | the `/data` volume; back that up and you have backed up everything |
+| Metadata key | set it in the app later, or pass `-e TMDB_API_KEY=...` |
 
-Open `aurora-vX.Y.Z-macos.dmg` and drag Aurora to Applications. Launching it registers
-a login item so it starts with your session, then opens your library. It has no window
-of its own — Aurora is a server, and the browser is its interface.
+**Updating:** `docker compose pull && docker compose up -d`, or
+`docker pull ghcr.io/aurora-media/aurora:latest` and recreate the container. Updating
+from inside the app is deliberately disabled in a container — there, the image *is*
+the unit of deployment.
 
-> **"Aurora can't be opened because it is from an unidentified developer"** — the app
-> is not notarised, which needs a paid Apple developer account. Right-click the app →
-> **Open** → **Open**, once. macOS remembers.
-
-Data lives in `~/Library/Application Support/Aurora`.
+**Unraid / CasaOS / Synology:** any of them will take the compose file above. Point the
+media volume at your share, keep `:ro`, and use `http://<host>:8096/icon.svg` if it
+asks for an icon.
 
 ---
 
-## Install without an installer
+## Install without an installer (any platform)
 
-The archives contain a single static binary and the web app. Nothing is installed,
-nothing is registered, and deleting the folder removes it completely. This is the
-right choice for a NAS, a container, or anyone who would rather run it by hand.
+The archives contain one static binary and the web app. Nothing is installed, nothing
+is registered, and deleting the folder removes every trace. This is the right choice
+for a NAS, a USB stick, or anyone who would rather run things by hand.
 
 **Linux / macOS**
 
@@ -140,11 +337,31 @@ cd aurora-vX.Y.Z-linux-arm64
 .\aurora.exe -addr :8096 -web .\web -data .\data
 ```
 
+FFmpeg has to be on your `PATH`, **or** simply drop `ffmpeg.exe` and `ffprobe.exe` into
+the same folder as `aurora.exe` (or an `ffmpeg\` subfolder) — Aurora looks there too.
+
 | Flag | Default | What it does |
 |---|---|---|
 | `-addr` | `:8096` | address and port to listen on |
 | `-web` | `./web` | the web app that ships in the archive |
 | `-data` | `./data` | database, transcode cache and backups |
+| `-tls-cert`, `-tls-key` | none | serve HTTPS directly instead of plain HTTP |
+
+The same three settings can come from `aurora.conf` beside the binary, or from the
+environment — useful when the command line is not yours to change:
+
+```ini
+# aurora.conf
+addr = :8096
+data = /var/lib/aurora
+web  = /usr/share/aurora/web
+```
+
+```bash
+AURORA_ADDR=:8096 AURORA_DATA=/srv/aurora ./aurora
+```
+
+A flag beats the environment, which beats the file.
 
 Which archive to take:
 
@@ -158,24 +375,17 @@ Which archive to take:
 
 ### Running it as a service yourself
 
-If you unpacked the archive but still want it to survive a reboot, the unit file the
-package uses is in [`aurora.service`](aurora.service).
-Copy it to `/etc/systemd/system/`, fix the paths, then:
+If you unpacked an archive but still want it to survive a reboot, the unit file the
+Linux packages use is in [`aurora.service`](aurora.service). Copy it to
+`/etc/systemd/system/`, fix the paths, then:
 
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now aurora
 ```
 
-`Restart=always` is not decoration — it is what makes updating from inside the app
-end in a running server rather than a stopped one.
-
----
-
-## Docker
-
-An official image is not published yet. Public archives are also pending; there is
-currently no supported public download to install.
+`Restart=always` is not decoration — it is what makes updating from inside the app end
+in a running server rather than a stopped one.
 
 ---
 
@@ -184,17 +394,17 @@ currently no supported public download to install.
 1. Open `http://localhost:8096`, or `http://<this-machine-ip>:8096` from another
    device on the same network.
 2. Register. **The first account becomes the admin.**
-3. **Ajustes → Añadir biblioteca**, pick a type, and browse to the folder.
+3. **Settings → Add library**, pick a type, and browse to the folder.
 
 The folder picker browses the **server's** disk, not the disk of the device you are
 browsing from. If Aurora runs on a Pi, you are looking at the Pi.
 
 | Library type | Expects |
 |---|---|
-| Películas | `Film (2019)/film.mkv`, or loose files named `Film (2019).mkv` |
+| Movies | `Film (2019)/film.mkv`, or loose files named `Film (2019).mkv` |
 | Series / Anime | `Show/Season 1/Show S01E02.mkv`, and most of the other shapes releases use |
-| Documentales | either of the above |
-| Música | `Artist/Album (1997)/03 - Song.flac` — see below |
+| Documentaries | either of the above |
+| Music | `Artist/Album (1997)/03 - Song.flac` — see below |
 
 Scanning is immediate; artwork and metadata arrive in the background. Music skips the
 scrapers entirely.
@@ -203,7 +413,7 @@ scrapers entirely.
 
 ## Updating
 
-**Panel de control → Actualizaciones.**
+**Dashboard → Updates.**
 
 Aurora checks [aurora-releases](https://github.com/aurora-media/aurora-releases/releases)
 for a newer build **of its own platform**, shows what changed,
@@ -249,13 +459,13 @@ published yet.
 ### …play a file my browser cannot open
 
 Nothing to do — Aurora notices and remuxes or transcodes it. If you would rather your
-own player handled it, **Ajustes → Vídeo → Reproductor externo** hands VLC or mpv the
+own player handled it, **Settings → Video → External player** hands VLC or mpv the
 original file: they decode DTS, TrueHD, HDR and PGS subtitles that no browser will
 touch, and the server does nothing but serve bytes.
 
 ### …watch something with someone who does not have Aurora
 
-**Ajustes → Vídeo → Ver juntos → Crear enlace.** Send them the link. They need no
+**Settings → Video → Watch together → Create a link.** Send them the link. They need no
 account, no app and nothing installed; they get their own volume and their own
 fullscreen, and you keep the controls. The link works for that one title and lapses
 after twelve idle hours.
@@ -272,7 +482,7 @@ worse than none. The manual offset is still there for the rest.
 
 ### …add music
 
-Add a library of type **Música** pointed at your records. The player lives in the app
+Add a library of type **Music** pointed at your records. The player lives in the app
 shell, so a record keeps going while you browse.
 
 **Where the names come from.** There is no music database and nothing is sent
@@ -281,7 +491,7 @@ anywhere. Two sources, in this order:
 1. **The folders**, which the person who owns the collection arranged on purpose:
 
    ```
-   Música/
+   Music/
      Eminem/                              ← artist
        Curtain Call_ The Hits - Eminem/   ← album; "_ " becomes ": "
          01 - Eminem - Intro.flac         ← track 1, "Intro"
@@ -308,33 +518,33 @@ metadata to protect.
 
 ### …stop a housemate seeing everything
 
-**Panel de control → Usuarios.** Each account gets its own watch history, resume points
+**Dashboard → Users and profiles.** Each account gets its own watch history, resume points
 and lists, and you can limit which libraries it sees at all.
 
 ### …change how it looks
 
-**Ajustes → Temas.** Presets, plus a CSS box that can override anything on the page.
+**Settings → Appearance.** Presets, plus a CSS box that can override anything on the page.
 
 ### …skip intros
 
-**Ajustes → Serie** while an episode is playing. Set the markers by hand, or let Aurora
+**Settings → Show** while an episode is playing. Set the markers by hand, or let Aurora
 find them by comparing the audio of two episodes.
 
 ### …make a playlist
 
 **Listas** in the sidebar. Create one, then right-click anything in the library and
-choose *Añadir a una lista*. A list is a view, not a folder: removing something from
+choose *Add to a list*. A list is a view, not a folder: removing something from
 one never touches the file, and lists belong to the account that made them, so two
 people in a house do not share them.
 
 ### …sync with Trakt
 
-**Panel de control → Plugins → Trakt** takes a Client ID and Client Secret. Aurora
+**Dashboard → Plugins → Trakt** takes a Client ID and Client Secret. Aurora
 ships neither: an application that embeds its own OAuth secret has published it to
 everyone who downloads it. Create a free application at *trakt.tv → Settings → Your
 API Apps*, Redirect URI `urn:ietf:wg:oauth:2.0:oob`, and paste the two values.
 
-Each person then links their own account in **Cuenta → Trakt**: Aurora shows a short
+Each person then links their own account in **Account → Trakt**: Aurora shows a short
 code, you type it into trakt.tv on whatever device is nearest, and the page notices
 by itself. After that, finishing something here marks it there, and **Traer mi
 historial de Trakt** brings an existing history the other way.
@@ -428,7 +638,7 @@ your own database or environment, never in this repo.
 | TheTVDB | anime episode ordering (optional) | [thetvdb.com](https://thetvdb.com/subscribe) |
 | OpenSubtitles | subtitles in any language (optional) | free account at [opensubtitles.com](https://www.opensubtitles.com/consumers) |
 
-Paste the TMDB key in **Panel de control → Plugins**, or set `TMDB_API_KEY` (see
+Paste the TMDB key in **Dashboard → Plugins**, or set `TMDB_API_KEY` (see
 `.env.example`). Without one Aurora still runs; titles just keep their filename.
 
 The language metadata comes back in — titles, synopses, collection names — is the
@@ -445,30 +655,57 @@ adapters index on.
 ## Troubleshooting
 
 **Nothing at `localhost:8096`**
-Check it is running: `systemctl status aurora`, *Services* on Windows, or
-`~/Library/Application Support/Aurora/aurora.log` on macOS.
+Check it is running.
+*Windows:* `Win+R` → `services.msc` → **Aurora Media Server** should say *Running*; if
+it does not, right-click → Start, and read `C:\ProgramData\Aurora\aurora.log`.
+*Linux:* `systemctl status aurora` and `journalctl -u aurora -n 50`.
+*macOS:* `~/Library/Application Support/Aurora/aurora.log`.
+*Docker:* `docker logs aurora`.
+If the log says the address is already in use, something else has the port — Jellyfin
+uses 8096 too. Change `addr` in `aurora.conf` (Windows), the unit file (Linux) or the
+`-p` mapping (Docker).
 
 **Another device on the network cannot reach it**
-Use the machine's IP, not `localhost`. On Windows, allow `aurora.exe` through the
-firewall when it asks — if you dismissed that prompt, add the rule by hand.
+Use the machine's IP, not `localhost` — `localhost` on a phone means the phone.
+On Windows this is nearly always the firewall: rerun the installer and leave *Allow
+other devices on my network to reach Aurora* ticked, or add the rule by hand in an
+**administrator** PowerShell:
+
+```powershell
+netsh advfirewall firewall add rule name="Aurora Media Server" dir=in action=allow protocol=TCP localport=8096
+```
+
+Both devices also have to be on the same network: a phone on mobile data, or on a
+guest Wi-Fi, cannot see your PC.
 
 **A file will not play**
-Almost always FFmpeg missing from `PATH`. `ffmpeg -version` should print something. The
-player also shows what it is doing — *Directo*, *Remux* or *Transcodificando* — which
-is the first thing worth reporting in an issue.
+Almost always FFmpeg missing. `ffmpeg -version` in a terminal should print something.
+On Windows you can also drop `ffmpeg.exe` and `ffprobe.exe` next to `aurora.exe` in
+`C:\Program Files\Aurora`, or in an `ffmpeg\` folder there, and restart the service.
+The player shows what it is doing — *Direct*, *Remux* or *Transcoding* — which is the
+first thing worth putting in an issue.
 
 **Playback stutters on a small machine**
-*Directo* and *Remux* cost the server almost nothing. *Transcodificando* means a full
+*Direct* and *Remux* cost the server almost nothing. *Transcoding* means a full
 re-encode, which a Raspberry Pi cannot do in real time for 1080p or 4K. If you see it
 often, the device doing the watching probably cannot decode the codec — an external
 player usually can.
 
 **The scan found nothing**
 The folder picker browses the server's disk. Check the path is the one the *server*
-sees, not the one your laptop sees.
+sees, not the one your laptop sees. On Linux, Aurora runs as the `aurora` user, which
+has to be able to read the folder: `sudo -u aurora ls /your/media` tells you in one
+line. On Windows, a service cannot see mapped network drives — see the note at the end
+of the Windows section.
+
+**It cannot play anything on a Raspberry Pi except by transcoding, and that stutters**
+A Pi has no video encoder, so a real re-encode is never going to keep up. What it does
+brilliantly is *Direct* and *Remux*, which cost nothing. If a specific file always
+transcodes, it is the watching device that cannot decode it — an external player, or a
+different browser, usually fixes it.
 
 **A subtitle is out of step**
 Aurora tried and was not confident enough to move it, which it says in the log. Use the
-offset buttons in **Ajustes → Subtítulos**.
+offset buttons in **Settings → Subtitles**.
 
 ---

@@ -1,0 +1,36 @@
+# Aurora with Docker. Two edits and it runs:
+#
+#   1. point the media line at your own folder
+#   2. set TZ to your timezone, so "watched last night" means last night
+#
+#   docker compose up -d      then open http://<this-machine-ip>:8096
+#
+# The image carries FFmpeg and MKVToolNix, so nothing else has to be installed.
+# It runs on amd64 and arm64, a Raspberry Pi included.
+
+services:
+  aurora:
+    image: ghcr.io/aurora-media/aurora:latest
+    container_name: aurora
+    restart: unless-stopped
+    ports:
+      # host:container. Change only the left number if 8096 is taken —
+      # Jellyfin uses it too.
+      - "8096:8096"
+    volumes:
+      # Aurora's own data: database, accounts, watch history, artwork, cache.
+      # Back this up and you have backed up everything but the films.
+      - ./aurora-data:/data
+      # Your media, read-only. Mount it at the SAME path inside the container
+      # as it has on the host: library paths are stored in the database, so
+      # identical paths are what lets the library survive a move or a rebuild.
+      - /path/to/your/media:/path/to/your/media:ro
+    environment:
+      - TZ=Europe/Madrid
+      # Optional. The same key can be pasted in the app under
+      # Dashboard -> Plugins, which stores it in the database instead.
+      # - TMDB_API_KEY=
+    # Hardware transcoding on Intel/AMD graphics. Uncomment if the machine has
+    # them; a Raspberry Pi has no encoder at all, so leave it off there.
+    # devices:
+    #   - /dev/dri:/dev/dri
