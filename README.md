@@ -426,6 +426,25 @@ release that will not start is renaming one file rather than finding another com
 Builds made from a working tree report themselves as `dev` and are never offered a
 replacement — that would throw away whatever they were built to test.
 
+### What that does on each install
+
+| Install | What happens |
+|---|---|
+| **Windows service** | The new binary replaces the old one in place and Aurora exits; Windows restarts the service within seconds. Your data folder, `aurora.conf` and the FFmpeg beside it are untouched. |
+| **Linux package** | Same, and systemd restarts it (`Restart=always`). The package manager is not involved, so `apt list --upgradable` will not mention Aurora. |
+| **Portable archive** | The binary is replaced, but nothing restarts it — start it again yourself. |
+| **Docker** | Updating from inside the app is disabled on purpose: the image is the unit of deployment. `docker compose pull && docker compose up -d`. |
+
+### Or just run the new installer
+
+On Windows, downloading the latest `-windows-setup.exe` and running it over the top is
+a perfectly good update: it stops the service, replaces the files, and keeps your data
+folder, your port and your firewall rule. The same goes for `apt install ./aurora-*.deb`
+on Linux.
+
+You never need to uninstall first, and uninstalling never takes your library, accounts
+or watch history with it.
+
 ---
 
 ## Where should the server run?
